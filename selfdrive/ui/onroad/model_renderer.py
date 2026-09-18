@@ -175,8 +175,8 @@ class ModelRenderer(Widget):
       self._draw_lead_indicator(radar_state)
       # Adjacent leads may be published by radard for non-UI consumers (e.g. HumanLaneChanges),
       # so gate drawing on the AdjacentLeadsUI param directly.
-      if sm.valid.get("starpilotRadarState", False) and self._params.get_bool("AdjacentLeadsUI"):
-        self._draw_adjacent_leads()
+      #if sm.valid.get("starpilotRadarState", False) and self._params.get_bool("AdjacentLeadsUI"):
+      #  self._draw_adjacent_leads()
 
     self._draw_radar_tracks()
 
