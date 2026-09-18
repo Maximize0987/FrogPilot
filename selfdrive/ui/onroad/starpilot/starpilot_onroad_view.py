@@ -215,7 +215,7 @@ class StarPilotOnroadView(AugmentedRoadView):
       render_adjacent_lanes(mr)
 
       # Render stopping point atop the path
-      render_stopping_point(mr, self._font_bold)
+      #render_stopping_point(mr, self._font_bold)
 
     # Keep the CSC glow above the camera/model/path layers, but below the HUD.
     render_behind(rect, self._get_border_width())
