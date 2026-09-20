@@ -26,13 +26,13 @@ DEFAULT_LANE_LINES_WIDTH = 4.0
 DEFAULT_PATH_EDGE_WIDTH = 20.0
 DEFAULT_PATH_WIDTH = 6.1
 DEFAULT_ROAD_EDGES_WIDTH = 2.0
-RADAR_MARKER_RADIUS = 7.0
-RADAR_MARKER_OUTLINE_RADIUS = 9.0
-RADAR_MARKER_TEXTURE_SIZE = 22
+RADAR_MARKER_RADIUS = 13.0
+RADAR_MARKER_OUTLINE_RADIUS = 15.0
+RADAR_MARKER_TEXTURE_SIZE = 28
 RADAR_MARKER_TEXTURE_CENTER = RADAR_MARKER_TEXTURE_SIZE / 2.0
 RADAR_MARKER_TEXTURE_KEY = "onroad-radar-marker-v1"
 RADAR_MARKER_OUTLINE_COLOR = rl.Color(0, 0, 0, 170)
-RADAR_MARKER_FILL_COLOR = rl.Color(255, 40, 40, 230)
+RADAR_MARKER_FILL_COLOR = rl.Color(249, 83, 227, 230)
 
 THROTTLE_COLORS = [
   rl.Color(13, 248, 122, 102),   # HSLF(148/360, 0.94, 0.51, 0.4)
@@ -550,7 +550,8 @@ class ModelRenderer(Widget):
   def _draw_lead_metrics(self, adjacent, chevron, lead_data):
     is_metric = ui_state.is_metric
     use_si_metrics = ui_state.starpilot_toggles.get("UseSiMetrics", False)
-
+    devside = ui_state.starpilot_toggles.get("developer_sidebar", False)
+    
     if is_metric or use_si_metrics:
       lead_distance_unit = "m"
       distance_conversion = 1.0
@@ -563,12 +564,21 @@ class ModelRenderer(Widget):
       speed_conversion_metrics = CV.MS_TO_MPH
 
     y_rel = getattr(lead_data, "yRel", 0.0)
+    v_rel = getattr(lead_data, "vRel", 0.0)
+    vrel_string = f"{round(v_rel * speed_conversion_metrics)}"
     lead_distance = lead_data.dRel + (abs(y_rel) if adjacent else 0.0)
     lead_speed = max(getattr(lead_data, "vLead", 0.0), 0.0)
 
+    leadin = [-10, -5, 0]
+    leadout = [51, 153, 255]
+    leadcolor = int(round(np.interp(vrel_string, leadin, leadout)))
+    color_lead = rl.Color(255, leadcolor, 51, 255)
+    
     distance_string = f"{round(lead_distance * distance_conversion)}"
     speed_string = f"{round(lead_speed * speed_conversion_metrics)}"
-
+    v_ego = max(ui_state.sm["carState"].vEgo, 0.0)
+    time_gap = lead_distance / max(v_ego, 1.0)
+    
     text_lines = []
     if adjacent:
       text_lines.append(f"{distance_string} {lead_distance_unit}")
@@ -578,20 +588,20 @@ class ModelRenderer(Widget):
         plan = ui_state.sm["starpilotPlan"]
         desired_follow_distance = float(plan.desiredFollowDistance) if plan and plan.desiredFollowDistance > 0 else 0.0
         desired_distance = max(0, round(desired_follow_distance * distance_conversion))
-        text_lines.append(f"{distance_string} {lead_distance_unit} (Desired: {desired_distance})")
+        text_lines.append(f"{distance_string} {lead_distance_unit} ({desired_distance}) {vrel_string} {lead_speed_unit} {time_gap:.2f} s")
       else:
         text_lines.append(f"{distance_string} {lead_distance_unit}")
       
       text_lines.append(f"{speed_string}{lead_speed_unit}")
 
-      v_ego = max(ui_state.sm["carState"].vEgo, 0.0)
-      time_gap = lead_distance / max(v_ego, 1.0)
-      text_lines.append(f"{time_gap:.2f} seconds")
+      #v_ego = max(ui_state.sm["carState"].vEgo, 0.0)
+      #time_gap = lead_distance / max(v_ego, 1.0)
+      #text_lines.append(f"{time_gap:.2f} seconds")
 
     from openpilot.system.ui.lib.application import gui_app, FontWeight
     from openpilot.selfdrive.ui.onroad.starpilot.path import _draw_text_with_outline
     font = gui_app.font(FontWeight.SEMI_BOLD)
-    font_size = 36
+    font_size = 75
     line_height = font_size + 2
 
     max_text_width = 0.0
@@ -600,8 +610,11 @@ class ModelRenderer(Widget):
       if sz.x > max_text_width:
         max_text_width = sz.x
 
-    centerX = chevron[1][0]
-    startY = max(chevron[0][1], chevron[2][1]) + line_height + 5
+    if devside:
+      centerX = 930  # centerX = chevron[1][0]
+    else:
+      centerX = 1080
+    startY = 900  # startY = max(chevron[0][1], chevron[2][1]) + line_height + 5
 
     x_margin = max_text_width * 0.1
     y_margin = line_height * 0.1
@@ -630,8 +643,22 @@ class ModelRenderer(Widget):
       sz = measure_text_cached(font, line, font_size)
       line_x = centerX - sz.x / 2
       line_y = startY + (i * line_height)
-      _draw_text_with_outline(line, line_x, line_y, font, font_size)
-
+      #_draw_text_with_outline(line, line_x, line_y, font, font_size)
+      if v_rel > 0:
+        pos = rl.Vector2(line_x, line_y)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x - 1, pos.y - 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x + 1, pos.y - 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x - 1, pos.y + 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x + 1, pos.y + 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, pos, font_size, 0, rl.WHITE)
+      else:
+        pos = rl.Vector2(line_x, line_y)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x - 1, pos.y - 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x + 1, pos.y - 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x - 1, pos.y + 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, rl.Vector2(pos.x + 1, pos.y + 1), font_size, 0, rl.BLACK)
+        rl.draw_text_ex(font, line, pos, font_size, 0, color_lead)
+  
   def _draw_radar_tracks(self):
     radar_tracks_enabled = self._params.get_bool("RadarTracksUI")
     if not radar_tracks_enabled:
