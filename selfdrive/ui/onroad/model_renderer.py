@@ -600,8 +600,8 @@ class ModelRenderer(Widget):
         text_lines.append(f"{distance_string} {lead_distance_unit} ({desired_distance}) {vrel_string} {lead_speed_unit} {time_gap:.2f} s")
       else:
         text_lines.append(f"{distance_string} {lead_distance_unit}")
-
-      text_lines.append(f"{speed_string}{lead_speed_unit}")
+      
+      #text_lines.append(f"{speed_string}{lead_speed_unit}")
 
       #v_ego = max(ui_state.sm["carState"].vEgo, 0.0)
       #time_gap = lead_distance / max(v_ego, 1.0)
