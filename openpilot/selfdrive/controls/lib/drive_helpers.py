@@ -11,7 +11,7 @@ MIN_STABLE_DELAY = 0.3
 
 # EU guidelines
 MAX_LATERAL_JERK = 5.0  # m/s^3
-MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2
+MAX_LATERAL_ACCEL_NO_ROLL = 5.0  # m/s^2
 
 
 STOPPING_SPEED = 0.25  # m/s, speed at which the car goes into the stopping state
