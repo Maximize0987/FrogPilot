@@ -334,11 +334,11 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # ********** events only containing alerts that display while engaged **********
 
   EventName.steerTempUnavailableSilent: {
-    ET.WARNING: Alert(
-      "Steering Assist Temporarily Unavailable",
-      "",
-      AlertStatus.userPrompt, AlertSize.small,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 1.8),
+    #ET.WARNING: Alert(
+    #  "Steering Assist Temporarily Unavailable",
+    #  "",
+    #  AlertStatus.userPrompt, AlertSize.small,
+    #  Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 1.8),
   },
 
   EventName.driverDistracted1: {
@@ -614,7 +614,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.tooDistracted: {
-    ET.NO_ENTRY: too_distracted_alert,
+    #ET.NO_ENTRY: too_distracted_alert,
   },
 
   EventName.excessiveActuation: {
@@ -629,7 +629,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("Gear not D"),
+    #ET.SOFT_DISABLE: user_soft_disable_alert("Gear not D"),
     ET.NO_ENTRY: NoEntryAlert("Gear not D"),
   },
 
@@ -657,18 +657,18 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.doorOpen: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("Door Open"),
-    ET.NO_ENTRY: NoEntryAlert("Door Open"),
+    #ET.SOFT_DISABLE: user_soft_disable_alert("Door Open"),
+    #ET.NO_ENTRY: NoEntryAlert("Door Open"),
   },
 
   EventName.seatbeltNotLatched: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("Seatbelt Unlatched"),
-    ET.NO_ENTRY: NoEntryAlert("Seatbelt Unlatched"),
+    #ET.SOFT_DISABLE: user_soft_disable_alert("Seatbelt Unlatched"),
+    #ET.NO_ENTRY: NoEntryAlert("Seatbelt Unlatched"),
   },
 
   EventName.espDisabled: {
-    ET.SOFT_DISABLE: soft_disable_alert("Electronic Stability Control Disabled"),
-    ET.NO_ENTRY: NoEntryAlert("Electronic Stability Control Disabled"),
+    #ET.SOFT_DISABLE: soft_disable_alert("Electronic Stability Control Disabled"),
+    #ET.NO_ENTRY: NoEntryAlert("Electronic Stability Control Disabled"),
   },
 
   # Different openpilot services communicate between each other at a certain
@@ -812,12 +812,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   # When the car is driving faster than most cars in the training data, the model outputs can be unpredictable.
   EventName.speedTooHigh: {
-    ET.WARNING: Alert(
-      "Speed Too High",
-      "Model uncertain at this speed",
-      AlertStatus.userPrompt, AlertSize.mid,
-      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 4.),
-    ET.NO_ENTRY: NoEntryAlert("Slow down to engage"),
+    #ET.WARNING: Alert(
+    #  "Speed Too High",
+    #  "Model uncertain at this speed",
+    #  AlertStatus.userPrompt, AlertSize.mid,
+    #  Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 4.),
+    #ET.NO_ENTRY: NoEntryAlert("Slow down to engage"),
   },
 
   EventName.vehicleSensorsInvalid: {
