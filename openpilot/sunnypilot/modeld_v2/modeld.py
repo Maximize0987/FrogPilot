@@ -96,7 +96,7 @@ class ModelState(ModelStateBase):
     overrides = {override.key: override.value for override in model_bundle.overrides} if model_bundle else {}
 
     self.LAT_SMOOTH_SECONDS = float(overrides.get('lat', ".0"))
-    self.LAT_SMOOTH_SECONDS = self.LAT_SMOOTH_SECONDS + 0
+    self.LAT_SMOOTH_SECONDS = self.LAT_SMOOTH_SECONDS + 0.05
     self.LONG_SMOOTH_SECONDS = float(overrides.get('long', ".0"))
     self.MIN_LAT_CONTROL_SPEED = 0.3
     self.PLANPLUS_CONTROL: float = 1.0
