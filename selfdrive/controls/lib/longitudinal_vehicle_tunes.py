@@ -560,6 +560,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     closing_speed < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
     lead_brake < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE
   ):
+    print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
     return None
 
   distance_factor = np.clip(
