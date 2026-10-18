@@ -536,17 +536,10 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     not is_toyota_rav4_tss2_post_departure_tune(CP) or
     lead is None or not bool(getattr(lead, "status", False)) or
     bool(getattr(lead, "radar", False)) or
-    float(v_ego) < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_EGO_SPEED
-  ):
-    return None
-
-  if (  
+    float(v_ego) < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_EGO_SPEED or
     float(getattr(lead, "modelProb", 0.0)) < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_MODEL_PROB or
     abs(float(getattr(lead, "yRel", 0.0))) > TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET
   ):
-    #yOO = (round(float(getattr(lead, "modelProb", 0.0))2)
-    distance = float(getattr(lead, "dRel", float("inf")))
-    print(f"PROB: {modelProb} YREL {yRel} DREL {dRel}")
     return None
 
   distance = float(getattr(lead, "dRel", float("inf")))
