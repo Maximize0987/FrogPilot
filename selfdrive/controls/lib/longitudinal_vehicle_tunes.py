@@ -583,6 +583,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
   )
   decel = 0.10 + 0.20 * distance_factor + 0.10 * closing_factor + 0.10 * brake_factor
   decel *= 0.75 + 0.25 * confidence_factor
+  print(f"DECEL: {decel}")
   return max(float(accel_min), -min(TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DECEL, decel))
 
 
