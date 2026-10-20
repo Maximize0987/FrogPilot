@@ -2404,12 +2404,12 @@ class LongitudinalPlanner:
     # Safety checks for rubber-banding mitigation
     max_jerk = np.max(np.abs(self.mpc.j_solution))
     max_accel_change = np.max(np.abs(np.diff(self.mpc.a_solution)))
-    if (max_jerk > 5.0 or max_accel_change > 2.0) and now_t - self._safety_warning_log_t >= PLANNER_SAFETY_WARNING_INTERVAL:
-      cloudlog.warning(
-        f"Longitudinal planner output discontinuity: jerk={max_jerk:.2f} m/s^3, "
-        f"accel_change={max_accel_change:.2f} m/s^2"
-      )
-      self._safety_warning_log_t = now_t
+    #if (max_jerk > 5.0 or max_accel_change > 2.0) and now_t - self._safety_warning_log_t >= PLANNER_SAFETY_WARNING_INTERVAL:
+    #  cloudlog.warning(
+    #    f"Longitudinal planner output discontinuity: jerk={max_jerk:.2f} m/s^3, "
+    #    f"accel_change={max_accel_change:.2f} m/s^2"
+    #  )
+    #  self._safety_warning_log_t = now_t
 
     # Interpolate 0.05 seconds and save as starting point for next iteration
     a_prev = self.a_desired
