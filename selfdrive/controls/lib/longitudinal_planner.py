@@ -2314,15 +2314,15 @@ class LongitudinalPlanner:
     if panic_bypass:
       if now_t - self._panic_bypass_log_t > 5.0:
         self._panic_bypass_log_t = now_t
-        try:
-          cloudlog.warning(
-            "LON_SLOPE close bypass: "
-            f"slope={uncert_slope:.3f}/s uncertainty={uncertainty:.3f} "
-            f"v_ego={v_ego:.2f} v_rel={(v_ego - self.lead_one.vLead) if lead_one_active else 0.0:.2f} "
-            f"lead_dist={self.lead_dist_f if self.lead_dist_f is not None else -1:.2f}"
-          )
-        except Exception:
-          pass
+        #try:
+        #  cloudlog.warning(
+        #    "LON_SLOPE close bypass: "
+        #    f"slope={uncert_slope:.3f}/s uncertainty={uncertainty:.3f} "
+        #    f"v_ego={v_ego:.2f} v_rel={(v_ego - self.lead_one.vLead) if lead_one_active else 0.0:.2f} "
+        #    f"lead_dist={self.lead_dist_f if self.lead_dist_f is not None else -1:.2f}"
+        #  )
+        #except Exception:
+        #  pass
 
     personality = get_longitudinal_personality(sm)
 
