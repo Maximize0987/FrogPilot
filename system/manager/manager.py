@@ -53,7 +53,7 @@ _manager_import_timing_line = (
   f"starpilot={_MANAGER_IMPORT_DONE - _MANAGER_CORE_IMPORT_DONE:.3f}s "
   f"total={_MANAGER_IMPORT_DONE - _MANAGER_IMPORT_START:.3f}s"
 )
-print(_manager_import_timing_line, flush=True)
+#print(_manager_import_timing_line, flush=True)
 _append_boot_timing_line(_manager_import_timing_line)
 
 
@@ -85,7 +85,7 @@ def _log_boot_timing(scope: str, label: str, start: float, previous: float | Non
   base = previous if previous is not None else start
   line = f"SP_BOOT_TIMING {scope} {label} +{now - base:.3f}s total={now - start:.3f}s"
   _append_boot_timing_line(line)
-  cloudlog.warning(line)
+  #cloudlog.warning(line)
   return now
 
 
