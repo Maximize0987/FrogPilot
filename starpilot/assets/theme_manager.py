@@ -169,9 +169,9 @@ class ThemeManager:
         imported_assets += int(self._extract_zip_if_missing(self._git_show_bytes("Distance-Icons", path), destination))
 
       if imported_assets:
-        #print(f"Imported {imported_assets} local theme assets from {LOCAL_RESOURCES_PATH}")
+        print(f"Imported {imported_assets} local theme assets from {LOCAL_RESOURCES_PATH}")
     except (FileNotFoundError, subprocess.CalledProcessError, zipfile.BadZipFile, OSError) as error:
-      #print(f"Failed to sync local theme resources from {LOCAL_RESOURCES_PATH}: {error}")
+      print(f"Failed to sync local theme resources from {LOCAL_RESOURCES_PATH}: {error}")
 
   @staticmethod
   def calculate_thanksgiving(year):
@@ -260,7 +260,7 @@ class ThemeManager:
         delete_file(theme_path)
 
         source = "Hugging Face" if "huggingface.co/buckets/" in theme_url else "GitHub"
-        #print(f"Downloading theme from {source}: {theme_name}")
+        print(f"Downloading theme from {source}: {theme_name}")
         downloaded_path = download_file(CANCEL_DOWNLOAD_PARAM, theme_path, asset_param, self.params_memory, DOWNLOAD_PROGRESS_PARAM, self.session, theme_url)
         theme_path = downloaded_path or theme_path
 
@@ -272,7 +272,7 @@ class ThemeManager:
           return
 
         if verify_download(theme_path, self.params_memory, self.session, theme_url):
-          #print(f"Theme {theme_name} downloaded and verified successfully from {source}!")
+          print(f"Theme {theme_name} downloaded and verified successfully from {source}!")
           self.update_theme_size(theme_component, theme_name, theme_path.stat().st_size)
 
           if extension == ".zip":
@@ -328,7 +328,7 @@ class ThemeManager:
             for item in response.json().get("tree", [])
             if item.get("type") == "blob"
           ]
-        #print(f"Unsupported repository URL: {repo_url}")
+        print(f"Unsupported repository URL: {repo_url}")
         return []
 
       def file_size(branch, path, fallback):
@@ -383,7 +383,7 @@ class ThemeManager:
           if update_assets and local_files and expected_size > 0:
             local_size = self.theme_sizes.get("boot_logos", {}).get(logo_name)
             if local_size != expected_size:
-              #print(f"boot logo {logo_name} is outdated, redownloading...")
+              print(f"boot logo {logo_name} is outdated, redownloading...")
               self.download_theme("boot_logos", logo_name, THEME_COMPONENT_PARAMS["boot_logos"], starpilot_toggles)
           continue
 
@@ -395,7 +395,7 @@ class ThemeManager:
             if update_assets and local_path.exists():
               local_size = self.theme_sizes.get("themes", {}).get(theme_name, {}).get(key)
               if local_size != expected_size:
-                #print(f"{key} {theme_name} is outdated, redownloading...")
+                print(f"{key} {theme_name} is outdated, redownloading...")
                 self.download_theme(key, theme_name, THEME_COMPONENT_PARAMS[key], starpilot_toggles)
             break
 
@@ -406,7 +406,7 @@ class ThemeManager:
 
     except requests.exceptions.RequestException as error:
       source = "Hugging Face" if is_huggingface else "GitHub"
-      #print(f"Failed to fetch theme sizes from {source}: {error}")
+      print(f"Failed to fetch theme sizes from {source}: {error}")
       return {}
 
   @staticmethod
@@ -489,11 +489,11 @@ class ThemeManager:
       delete_file(theme_path)
 
       theme_url = f"{download_link}/{candidate}{extension}" if theme_component == "boot_logos" else download_link + extension
-      #print(f"Downloading theme from {source}: {theme_name}")
+      print(f"Downloading theme from {source}: {theme_name}")
       download_file(CANCEL_DOWNLOAD_PARAM, theme_path, asset_param, self.params_memory, DOWNLOAD_PROGRESS_PARAM, self.session, theme_url)
 
       if verify_download(theme_path, self.params_memory, self.session, theme_url):
-        #print(f"Theme {theme_name} downloaded and verified successfully from {source}!")
+        print(f"Theme {theme_name} downloaded and verified successfully from {source}!")
         self.update_theme_size(theme_component, theme_name, theme_path.stat().st_size)
 
         if extension == ".zip":
@@ -620,7 +620,7 @@ class ThemeManager:
 
     if asset_mappings != self.previous_asset_mappings:
       for asset, (asset_type, current_value) in asset_mappings.items():
-        #print(f"Updating {asset}: {asset_type} with value {current_value}")
+        print(f"Updating {asset}: {asset_type} with value {current_value}")
 
         if asset_type == "boot_logo":
           self.update_boot_logo(current_value)
@@ -657,13 +657,13 @@ class ThemeManager:
 
     if not asset_location.exists() or theme == "stock":
       asset_location = STOCKOP_THEME_PATH / asset_type
-      #print(f"Using the stock {asset_type[:-1]} instead")
+      print(f"Using the stock {asset_type[:-1]} instead")
 
     delete_file(save_location, print_error=not boot_run)
 
     save_location.parent.mkdir(parents=True, exist_ok=True)
     save_location.symlink_to(asset_location, target_is_directory=True)
-    #print(f"Linked {save_location} to {asset_location}")
+    print(f"Linked {save_location} to {asset_location}")
 
   def update_theme_params(self, downloadable_boot_logos, downloadable_colors, downloadable_distance_icons, downloadable_icons, downloadable_signals, downloadable_sounds, downloadable_wheels):
     boot_logos_dir = THEME_SAVE_PATH / "bootlogos"
@@ -678,7 +678,7 @@ class ThemeManager:
         existing_assets = {item.stem.lower() for item in boot_logos_dir.glob("*") if item.is_file()}
         pending_assets = [asset for asset in assets if asset.lower() not in existing_assets]
         self.params.put(key, ",".join(sorted(set(pending_assets))))
-        #print(f"{key} updated successfully")
+        print(f"{key} updated successfully")
         return
       if subfolder == "steering_wheels":
         themes_path = steering_wheels_dir
@@ -688,7 +688,7 @@ class ThemeManager:
         existing_assets = {self.format_name(item.parent.name, subfolder) for item in themes_path.glob(f"*/{subfolder}") if item.is_dir()}
 
       self.params.put(key, ",".join(sorted(set(assets) - existing_assets)))
-      #print(f"{key} updated successfully")
+      print(f"{key} updated successfully")
 
     update_param("DownloadableBootLogos", downloadable_boot_logos, "boot_logos")
     update_param("DownloadableColors", downloadable_colors, "colors")
@@ -725,7 +725,7 @@ class ThemeManager:
       "steering_wheels": sorted(downloaded_wheels)
     })
 
-    #print("ThemesDownloaded updated successfully")
+    print("ThemesDownloaded updated successfully")
 
   def update_theme_size(self, theme_component, theme_name, file_size):
     if theme_component == "boot_logos":
@@ -755,7 +755,7 @@ class ThemeManager:
 
     resource_urls = get_resource_urls(self.session)
     if not resource_urls:
-      #print("Hugging Face and GitHub are offline...")
+      print("Hugging Face and GitHub are offline...")
       self.update_theme_params([], [], [], [], [], [], [])
       return
 
@@ -776,7 +776,7 @@ class ThemeManager:
 
     for theme, available_assets in assets["themes"].items():
       theme_name = self.format_name(theme, "theme_packs")
-      #print(f"Theme found: {theme_name}")
+      print(f"Theme found: {theme_name}")
 
       if "colors" in available_assets:
         downloadable_colors.append(theme_name)
@@ -792,13 +792,13 @@ class ThemeManager:
     downloadable_boot_logos = [Path(boot_logo).stem for boot_logo in assets["boot_logos"]]
     downloadable_wheels = [self.format_name(wheel, "steering_wheels") for wheel in assets["wheels"]]
 
-    #print(f"Downloadable Boot Logos: {downloadable_boot_logos}")
-    #print(f"Downloadable Colors: {downloadable_colors}")
-    #print(f"Downloadable Icons: {downloadable_icons}")
-    #print(f"Downloadable Signals: {downloadable_signals}")
-    #print(f"Downloadable Sounds: {downloadable_sounds}")
-    #print(f"Downloadable Distance Icons: {downloadable_distance_icons}")
-    #print(f"Downloadable Wheels: {downloadable_wheels}")
+    print(f"Downloadable Boot Logos: {downloadable_boot_logos}")
+    print(f"Downloadable Colors: {downloadable_colors}")
+    print(f"Downloadable Icons: {downloadable_icons}")
+    print(f"Downloadable Signals: {downloadable_signals}")
+    print(f"Downloadable Sounds: {downloadable_sounds}")
+    print(f"Downloadable Distance Icons: {downloadable_distance_icons}")
+    print(f"Downloadable Wheels: {downloadable_wheels}")
 
     if boot_run and update_assets:
       self.validate_themes(downloadable_boot_logos, downloadable_colors, downloadable_distance_icons, downloadable_icons, downloadable_signals, downloadable_sounds, downloadable_wheels, starpilot_toggles)
@@ -815,11 +815,11 @@ class ThemeManager:
     source_file = find_matching_theme_asset_file(THEME_SAVE_PATH / "bootlogos", image) or default_boot_logo
 
     if source_file.resolve() == default_boot_logo.resolve():
-      #print(f"Boot logo unchanged: {default_boot_logo}")
+      print(f"Boot logo unchanged: {default_boot_logo}")
       return
 
     shutil.copy2(source_file, default_boot_logo)
-    #print(f"Copied {source_file} to {default_boot_logo}")
+    print(f"Copied {source_file} to {default_boot_logo}")
 
   def update_wheel_image(self, image, boot_run=False, random_event=False):
     wheel_save_location = ACTIVE_THEME_PATH / "steering_wheel"
@@ -839,7 +839,7 @@ class ThemeManager:
 
     if not wheel_location.exists():
       wheel_location = STOCKOP_THEME_PATH / "steering_wheel"
-      #print("Using the stock steering wheel instead")
+      print("Using the stock steering wheel instead")
 
     delete_file(wheel_save_location, print_error=not boot_run)
     wheel_save_location.mkdir(parents=True, exist_ok=True)
@@ -850,16 +850,16 @@ class ThemeManager:
       stock_location = STOCKOP_THEME_PATH / "steering_wheel"
       matching_files = [images for images in stock_location.iterdir() if images.stem.lower() == "wheel"]
       if matching_files:
-        #print(f"Steering wheel '{image}' not found, using the stock steering wheel instead")
+        print(f"Steering wheel '{image}' not found, using the stock steering wheel instead")
 
     if not matching_files:
-      #print(f"No steering wheel asset found for '{image}'")
+      print(f"No steering wheel asset found for '{image}'")
       return
 
     source_file = matching_files[0]
     destination_file = wheel_save_location / f"wheel{source_file.suffix}"
     destination_file.symlink_to(source_file)
-    #print(f"Linked {destination_file} to {source_file}")
+    print(f"Linked {destination_file} to {source_file}")
 
   def validate_themes(self, downloadable_boot_logos, downloadable_colors, downloadable_distance_icons, downloadable_icons, downloadable_signals, downloadable_sounds, downloadable_wheels, starpilot_toggles):
     downloaded_data = self.params.get("ThemesDownloaded")
@@ -877,7 +877,7 @@ class ThemeManager:
     for display_name in downloaded_data.get("boot_logos", []):
       if not find_matching_theme_asset_file(boot_logos_path, display_name):
         file_stem = find_matching_theme_asset_name(downloadable_boot_logos, display_name) or display_name.replace(" ", "_").lower()
-        #print(f"Missing boot logo '{display_name}'. Downloading...")
+        print(f"Missing boot logo '{display_name}'. Downloading...")
         self.download_theme("boot_logos", file_stem, THEME_COMPONENT_PARAMS["boot_logos"], starpilot_toggles)
         self.update_active_theme(True, starpilot_toggles)
 
@@ -888,7 +888,7 @@ class ThemeManager:
       for component in components:
         component_path = THEME_SAVE_PATH / "theme_packs" / theme_folder_name / component
         if not component_path.is_dir() or not any(component_path.iterdir()):
-          #print(f"Missing or empty component '{component}' for theme '{theme_folder_name}'. Downloading...")
+          print(f"Missing or empty component '{component}' for theme '{theme_folder_name}'. Downloading...")
           self.download_theme(component, theme_folder_name, THEME_COMPONENT_PARAMS.get(component), starpilot_toggles)
           self.update_active_theme(True, starpilot_toggles)
 
@@ -897,7 +897,7 @@ class ThemeManager:
       file_stem = display_name.replace(" ", "_").lower()
       matching_files = list(wheels_path.glob(f"{file_stem}.*"))
       if not matching_files:
-        #print(f"Missing steering wheel '{display_name}'. Downloading...")
+        print(f"Missing steering wheel '{display_name}'. Downloading...")
         self.download_theme("steering_wheels", file_stem, THEME_COMPONENT_PARAMS["steering_wheels"], starpilot_toggles)
         self.update_active_theme(True, starpilot_toggles)
 
@@ -906,10 +906,10 @@ class ThemeManager:
       if dir_path.is_dir() and not any(dir_path.iterdir()):
         if dir_path in protected_dirs:
           continue
-        #print(f"Deleting empty folder: {dir_path}")
+        print(f"Deleting empty folder: {dir_path}")
         delete_file(dir_path)
       elif dir_path.is_file() and dir_path.name.startswith("tmp"):
-        #print(f"Deleting temp file: {dir_path}")
+        print(f"Deleting temp file: {dir_path}")
         delete_file(dir_path)
 
-    #print("Theme validation complete.")
+    print("Theme validation complete.")
