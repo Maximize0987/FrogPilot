@@ -1319,9 +1319,9 @@ class GuiApplication:
       current_time = time.monotonic()
       if current_time - self._last_fps_log_time >= FPS_LOG_INTERVAL:
         timing = self.frame_timing
-        cloudlog.warning(f"FPS dropped below {self._target_fps}: {fps} " +
-                         f"(frame={timing.frame_ms:.1f}ms cpu={timing.cpu_ms:.1f}ms " +
-                         f"draw={timing.draw_ms:.1f}ms update={timing.update_ms:.1f}ms present={timing.present_ms:.1f}ms)")
+        #cloudlog.warning(f"FPS dropped below {self._target_fps}: {fps} " +
+        #                 f"(frame={timing.frame_ms:.1f}ms cpu={timing.cpu_ms:.1f}ms " +
+        #                 f"draw={timing.draw_ms:.1f}ms update={timing.update_ms:.1f}ms present={timing.present_ms:.1f}ms)")
         self._last_fps_log_time = current_time
 
     # Strict mode: terminate UI if FPS drops too much
