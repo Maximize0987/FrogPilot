@@ -71,7 +71,7 @@ TOYOTA_SIENNA_POST_DEPARTURE_RESTOP_MIN_BRAKE = 0.18
 TOYOTA_SIENNA_POST_DEPARTURE_RESTOP_MAX_BRAKE = 0.32
 TOYOTA_COROLLA_BRAKING_LEAD_MAX_DECEL = 1.5
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_EGO_SPEED = 12.0
-TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_MODEL_PROB = 0.75 #0.85
+TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_MODEL_PROB = 0.5 #0.85
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET = 1.2
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_DISTANCE = 30.0
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DISTANCE = 125.0 # 105.0
@@ -394,8 +394,7 @@ def get_honda_crv_5g_low_speed_stopped_lead_cap(CP, lead, v_ego, accel_min):
   decel = float(np.clip(
     required_decel * 0.85,
     HONDA_CRV_5G_LOW_SPEED_STOP_MIN_DECEL,
-   factor
-  _CRV_5G_LOW_SPEED_STOP_MAX_DECEL,
+    HONDA_CRV_5G_LOW_SPEED_STOP_MAX_DECEL,
   ))
   return max(float(accel_min), -decel)
 
@@ -584,10 +583,8 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
   )
   decel = 0.10 + 0.20 * distance_factor + 0.10 * closing_factor + 0.10 * brake_factor
   decel *= 0.75 + 0.25 * confidence_factor
-  accel_min = accel_min * 0.85
-  decel *= 0.85
   print(f"DECEL: {decel}")
-  return max(float(accel_min), -min(0.425, decel))
+  return max(float(accel_min), -min(TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DECEL, decel))
 
 
 def is_toyota_rav4_tss2_radar_follow_lead(CP, lead, v_ego):
