@@ -545,8 +545,10 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     abs(float(getattr(lead, "yRel", 0.0))) > TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET
   ):
     #yOO = (round(float(getattr(lead, "modelProb", 0.0))2)
-    modelPro = round(float(getattr(lead, "modelProb", 0.0,2)))
-    yrel = round(abs(float(getattr(lead, "yRel", 0.0,2))))
+    modelPro = float(getattr(lead, "modelProb", 0.0))
+    modelPro = round(modelPro,2)
+    yrel = abs(float(getattr(lead, "yRel", 0.0)))
+    yrel = round(yrel,2)
     distance = float(getattr(lead, "dRel", float("inf")))
     distance = round(distance,2)
     print(f"PROB: {modelPro} YREL {yrel} DREL {distance}")
