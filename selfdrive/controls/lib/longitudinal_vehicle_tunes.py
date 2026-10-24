@@ -548,7 +548,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     modelPro = float(getattr(lead, "modelProb", 0.0))
     yrel = abs(float(getattr(lead, "yRel", 0.0)))
     distance = float(getattr(lead, "dRel", float("inf")))
-    print(f"PROB: {modelPro} YREL {yrel} DREL {distance}")
+    #print(f"PROB: {modelPro} YREL {yrel} DREL {distance}")
     return None
 
   distance = float(getattr(lead, "dRel", float("inf")))
@@ -560,7 +560,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     closing_speed < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
     lead_brake < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE
   ):
-    print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
+    #print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
     return None
 
   distance_factor = np.clip(
@@ -585,7 +585,8 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
   decel *= 0.75 + 0.25 * confidence_factor
   decel *= 0.85
   accel_min *= 0.85
-  print(f"DECEL: {decel}")
+  xval = max(float(accel_min), -min(0.425, decel))
+  print(f"DECEL: {xval}")
   #return max(float(accel_min), -min(TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DECEL, decel))
   return max(float(accel_min), -min(0.425, decel))
 
