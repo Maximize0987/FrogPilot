@@ -72,11 +72,11 @@ TOYOTA_SIENNA_POST_DEPARTURE_RESTOP_MAX_BRAKE = 0.32
 TOYOTA_COROLLA_BRAKING_LEAD_MAX_DECEL = 1.5
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_EGO_SPEED = 12.0
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_MODEL_PROB = 0.75 #0.85
-TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET = 1.2
+TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET = 1.5 #1.2
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_DISTANCE = 30.0
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DISTANCE = 125.0 # 105.0
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED = 0.75
-TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE = 0.35
+TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE = 0.25 #0.35
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_BRAKE = 2.0
 TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DECEL = 0.5
 TOYOTA_RAV4_TSS2_RADAR_FOLLOW_MIN_SPEED = 5.0
@@ -545,10 +545,11 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     abs(float(getattr(lead, "yRel", 0.0))) > TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_LATERAL_OFFSET
   ):
     #yOO = (round(float(getattr(lead, "modelProb", 0.0))2)
-    modelPro = float(getattr(lead, "modelProb", 0.0))
-    yrel = abs(float(getattr(lead, "yRel", 0.0)))
+    modelPro = round(float(getattr(lead, "modelProb", 0.0,2)))
+    yrel = round(abs(float(getattr(lead, "yRel", 0.0,2))))
     distance = float(getattr(lead, "dRel", float("inf")))
-    #print(f"PROB: {modelPro} YREL {yrel} DREL {distance}")
+    distance = round(distance,2)
+    print(f"PROB: {modelPro} YREL {yrel} DREL {distance}")
     return None
 
   distance = float(getattr(lead, "dRel", float("inf")))
@@ -560,7 +561,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
     closing_speed < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
     lead_brake < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE
   ):
-    #print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
+    print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
     return None
 
   distance_factor = np.clip(
