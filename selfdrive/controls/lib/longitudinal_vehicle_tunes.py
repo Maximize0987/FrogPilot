@@ -557,13 +557,15 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
   distance = float(getattr(lead, "dRel", float("inf")))
   lead_speed = max(float(getattr(lead, "vLead", 0.0)), 0.0)
   closing_speed = float(v_ego) - lead_speed
+  closings = round(closing_speed,2)
   lead_brake = max(0.0, -float(getattr(lead, "aLeadK", 0.0)))
+  leadb = round(lead_brake,2)
   if (
     not TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_DISTANCE <= distance <= TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DISTANCE or
     closing_speed < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
     lead_brake < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE
   ):
-    print(f"CLOSING: {closing_speed} LEAD_BRAKE {lead_brake}")
+    print(f"CLOSING: {closings} LEAD_BRAKE {leadb}")
     return None
 
   distance_factor = np.clip(
