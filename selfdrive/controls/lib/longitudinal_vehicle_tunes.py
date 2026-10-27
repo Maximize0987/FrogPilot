@@ -607,6 +607,8 @@ def is_toyota_rav4_tss2_radar_follow_lead(CP, lead, v_ego):
     return False
 
   lead_speed = max(float(getattr(lead, "vLead", 0.0)), 0.0)
+  distance = float(getattr(lead, "dRel", float("inf")))
+  distance = round(distance,2)
   closing_speed = float(v_ego) - lead_speed
   distance_limit = float(np.clip(
     TOYOTA_RAV4_TSS2_RADAR_FOLLOW_DISTANCE_OFFSET +
@@ -614,6 +616,9 @@ def is_toyota_rav4_tss2_radar_follow_lead(CP, lead, v_ego):
     TOYOTA_RAV4_TSS2_RADAR_FOLLOW_MIN_DISTANCE,
     TOYOTA_RAV4_TSS2_RADAR_FOLLOW_MAX_DISTANCE,
   ))
+  dist_lim = round(distance_limit,2)
+  if closing_speed >= TOYOTA_RAV4_TSS2_RADAR_FOLLOW_MIN_CLOSING_SPEED:
+    print(f"DREL: {distance} LIMIT: {dist_lim}")
   return (
     float(getattr(lead, "dRel", float("inf"))) <= distance_limit and
     closing_speed >= TOYOTA_RAV4_TSS2_RADAR_FOLLOW_MIN_CLOSING_SPEED
