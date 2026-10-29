@@ -562,7 +562,7 @@ def get_toyota_rav4_tss2_early_lead_cap(CP, lead, v_ego, accel_min):
   leadb = round(lead_brake,2)
   if (
     not TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_DISTANCE <= distance <= TOYOTA_RAV4_TSS2_EARLY_LEAD_MAX_DISTANCE or
-    closing_speed < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
+    closing_speed > TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_CLOSING_SPEED or
     lead_brake < TOYOTA_RAV4_TSS2_EARLY_LEAD_MIN_BRAKE
   ):
     print(f"CLOSING: {closings} LEAD_BRAKE {leadb}")
