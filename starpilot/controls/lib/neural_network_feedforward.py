@@ -269,7 +269,7 @@ class LatControlNNFF(LatControl):
         self.no_nudge = self.sm.frame
         self.max_cycles = 0
         self.cycles = 0
-      nudge_off = (self.sm.frame - self.no_nudge) * DT_CTRL < 3.0 # cooldown after blinker
+      nudge_off = (self.sm.frame - self.no_nudge) * DT_CTRL < 7.0 # cooldown after blinker
       if right_lane > 2.5 or abs(left_lane) > 2.5:  
         nudge_off = False
         self.last_nudge = 0
