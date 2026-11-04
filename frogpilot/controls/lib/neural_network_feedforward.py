@@ -44,7 +44,7 @@ LAT_PLAN_MIN_IDX = 5
 
 LL_CLOSE = 1.8
 LANE_IN = [-1.05, -0.05, 0.95]      #   LANE_IN = [-1.2, -0.2, 0.8]
-NUDGE_OUT = [-0.08, 0, 0.08]
+NUDGE_OUT = [-0.16, 0, 0.16]
 NUDGE_UP = 0.00134    # if 20 hz
 NUDGE_DOWN = -0.00134
 #NUDGE_INC = 0.000234   # if 100 hz
@@ -266,7 +266,7 @@ class LatControlNNFF(LatControl):
         self.no_nudge = self.sm.frame
         self.max_cycles = 0
         self.cycles = 0
-      nudge_off = (self.sm.frame - self.no_nudge) * DT_CTRL < 3.0 # cooldown after blinker
+      nudge_off = (self.sm.frame - self.no_nudge) * DT_CTRL < 6.0 # cooldown after blinker
       if right_lane > 2.5 or abs(left_lane) > 2.5:  
         nudge_off = False
         self.last_nudge = 0
