@@ -580,7 +580,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # ********** events only containing alerts that display while engaged **********
 
   EventName.steerTempUnavailableSilent: {
-    ET.WARNING: Alert(
+    #ET.WARNING: Alert(
       #"Steering Assist Temporarily Unavailable",
       #"",
       #AlertStatus.userPrompt, AlertSize.small,
