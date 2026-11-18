@@ -43,10 +43,10 @@ LOW_SPEED_Y = [12, 3, 1, 0]
 LAT_PLAN_MIN_IDX = 5
 
 LL_CLOSE = 1.8
-LANE_IN = [-1.05, -0.05, 0.95]      #   LANE_IN = [-1.2, -0.2, 0.8]
-NUDGE_OUT = [-0.16, 0, 0.16]
-NUDGE_UP = 0.00134    # if 20 hz
-NUDGE_DOWN = -0.0016
+LANE_IN = [-1.05, -0.15, -0.05, 0.15, 0.95]      #   LANE_IN = [-1.2, -0.2, 0.8]
+NUDGE_OUT = [-0.18, -0.01, 0, 0.01, 0.18]
+NUDGE_UP = 0.0013    # if 20 hz
+NUDGE_DOWN = -0.0013
 #NUDGE_INC = 0.000234   # if 100 hz
 
 class FluxModel:
