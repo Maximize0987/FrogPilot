@@ -4,22 +4,24 @@ import json
 import math
 import numpy as np
 import os
+import capnp   #
+import time    #
 
 from collections import deque
 from difflib import SequenceMatcher
-
 from cereal import log
+import cereal.messaging as messaging    #
+from openpilot.common.numpy_fast import interp      #
+from openpilot.common.realtime import DT_CTRL      #
+from openpilot.common.constants import ACCELERATION_DUE_TO_GRAVITY
 from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.common.numpy_fast import interp
 from openpilot.common.params import Params
-from openpilot.selfdrive.car.interfaces import FRICTION_THRESHOLD
-from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_friction
+from openpilot.common.pid import PIDController
+from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
-from openpilot.selfdrive.controls.lib.pid import PIDController
-from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
-from openpilot.frogpilot.common import frogpilot_paths, frogpilot_utilities
+from openpilot.frogpilot.common.frogpilot_variables import NNFF_MODELS_PATH, get_nnff_model_files, get_nnff_substitutes
 
 # At higher speeds (25+mph) we can assume:
 # Lateral acceleration achieved by a specific car correlates to
@@ -40,12 +42,20 @@ LOW_SPEED_Y = [12, 3, 1, 0]
 
 LAT_PLAN_MIN_IDX = 5
 
+LL_CLOSE = 1.8
+LANE_IN = [-1.05, -0.15, -0.05, 0.15, 0.95]      #   LANE_IN = [-1.2, -0.2, 0.8]
+NUDGE_OUT = [-0.18, -0.01, 0, 0.01, 0.18]
+NUDGE_UP = 0.0013    # if 20 hz
+NUDGE_DOWN = -0.0013
+#NUDGE_INC = 0.000234   # if 100 hz
+
 class FluxModel:
   def __init__(self, params_file):
     with open(params_file, "r") as f:
       params = json.load(f)
 
     self.input_size = params["input_size"]
+    self.output_size = params["output_size"]
 
     self.input_mean = np.array(params["input_mean"], dtype=np.float32).T
     self.input_std = np.array(params["input_std"], dtype=np.float32).T
@@ -76,24 +86,20 @@ class FluxModel:
   # End activation functions
 
   def check_for_friction_override(self):
-    self.friction_override = self.evaluate([[10.0, 0.0, 0.2]])[0] < 0.1
+    self.friction_override = self.evaluate([10.0, 0.0, 0.2]) < 0.1
 
-  def evaluate(self, input_arrays):
-    padded_input_arrays = []
-    for input_array in input_arrays:
-      if len(input_array) != self.input_size:
-        # If the input is length 2-4, then it's a simplified evaluation.
-        # In that case, need to add on zeros to fill out the input array to match the correct length.
-        if len(input_array) >= 2:
-          input_array = input_array + [0] * (self.input_size - len(input_array))
-        else:
-          raise ValueError(f"Input length {len(input_array)} must be 2 or greater")
-
-      padded_input_arrays.append(input_array)
+  def evaluate(self, input_array):
+    if len(input_array) != self.input_size:
+      # If the input is length 2-4, then it's a simplified evaluation.
+      # In that case, need to add on zeros to fill out the input array to match the correct length.
+      if len(input_array) >= 2:
+        input_array += [0] * (self.input_size - len(input_array))
+      else:
+        raise ValueError(f"Input length {len(input_array)} must be 2 or greater")
 
     # Rescale the input array using the input_mean and input_std
-    output = self.forward((np.array(padded_input_arrays, dtype=np.float32) - self.input_mean) / self.input_std)
-    return output[:, 0].tolist()
+    output = self.forward((np.array(input_array, dtype=np.float32) - self.input_mean) / self.input_std)
+    return float(output[0, 0])
 
   def forward(self, x):
     for weights, bias, activation in self.layers:
@@ -117,32 +123,27 @@ def get_lookahead_value(future_values, current_value):
 def get_nn_model(car, eps_firmware) -> FluxModel | None:
   model_path = get_nn_model_path(car, eps_firmware)
   if model_path:
-    model_name = os.path.splitext(os.path.basename(model_path))[0].split("_b'")[0]
-    Params().put("NNFFModelName", model_name.replace("_", " "))
+    Params().put("NNFFModelName", car.replace("_", " "))
     return FluxModel(model_path)
   return None
 
 def get_nn_model_path(car, eps_firmware) -> str | None:
   def best_model_path(query):
-    candidates = frogpilot_utilities.get_nnff_model_files()
+    candidates = get_nnff_model_files()
     if not candidates:
       return None, 0.0
 
     best = max(candidates, key=lambda model: similarity(model, query))
-    return os.path.join(frogpilot_paths.NNFF_MODELS_PATH, f"{best}.json"), similarity(best, query)
+    return os.path.join(NNFF_MODELS_PATH, f"{best}.json"), similarity(best, query)
 
   def find_valid_model(*queries_with_candidates):
     for query, candidate in queries_with_candidates:
-      if query == candidate:
-        if candidate in frogpilot_utilities.get_nnff_model_files():
-          return os.path.join(frogpilot_paths.NNFF_MODELS_PATH, f"{candidate}.json")
-      else:
-        path, score = best_model_path(query)
-        if path and candidate in path and score >= 0.9:
-          return path
+      path, score = best_model_path(query)
+      if path and candidate in path and score >= 0.9:
+        return path
     return None
 
-  substitutes = frogpilot_utilities.get_nnff_substitutes()
+  substitutes = get_nnff_substitutes()
   sub_candidate = substitutes.get(car, car)
 
   candidates_to_check = [car]
@@ -182,12 +183,19 @@ class LatControlNNFF(LatControl):
     self.lat_torque_nn_model = get_nn_model(CP.carFingerprint, str(next((fw.fwVersion for fw in CP.carFw if fw.ecu == "eps"), "")).replace("\\", ""))
     self.nnff_loaded = self.lat_torque_nn_model is not None
 
-    self.torque_params = CP.lateralTuning.torque
-    self.pid = PIDController(self.torque_params.kp, self.torque_params.ki,
-                             pos_limit=self.steer_max, neg_limit=-self.steer_max)
+    self.torque_params = CP.lateralTuning.torque.as_builder()
+    self.pid = PIDController(1.0, 0.3, 0.0, pos_limit=self.steer_max, neg_limit=-self.steer_max, rate=1/self.dt)
     self.torque_from_lateral_accel = CI.torque_from_lateral_accel()
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
 
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'liveCalibration', 'onroadEvents'])
+
+    self.current_nud = 0
+    self.last_nudge = 0
+    self.no_nudge = 0
+    self.cycles = 0
+    self.max_cycles = 0
+    
     # Instantaneous lateral jerk changes very rapidly, making it not useful on its own,
     # however, we can "look ahead" to the future planned lateral jerk in order to gauge
     # whether the current desired lateral jerk will persist into the future, i.e.
@@ -214,8 +222,9 @@ class LatControlNNFF(LatControl):
     self.nn_friction_override = self.lat_torque_nn_model.friction_override if self.lat_torque_nn_model else False
 
     # setup future time offsets
+    lat_delay = CP.steerActuatorDelay
     self.future_times = [0.3, 0.6, 1.0, 1.5]  # seconds in the future
-    self.nn_future_times = [time + CP.steerActuatorDelay for time in self.future_times]
+    self.nn_future_times = [time + lat_delay for time in self.future_times]
 
     # setup past time offsets
     self.past_times = [-0.3, -0.2, -0.1]
@@ -225,20 +234,16 @@ class LatControlNNFF(LatControl):
     self.past_future_len = len(self.past_times) + len(self.nn_future_times)
     self.roll_deque = deque(maxlen=history_check_frames[0])
 
-  def reset(self):
-    super().reset()
-    self.lateral_accel_desired_deque.clear()
-    self.roll_deque.clear()
-
-  def update_live_delay(self, lateral_delay):
-    self.nn_future_times = [time + lateral_delay for time in self.future_times]
+  def update_live_delay(self, lat_delay):
+    self.nn_future_times = [time + lat_delay for time in self.future_times]
+    self.past_future_len = len(self.past_times) + len(self.nn_future_times)
 
   def update_live_torque_params(self, latAccelFactor, latAccelOffset, friction):
     self.torque_params.latAccelFactor = latAccelFactor
     self.torque_params.latAccelOffset = latAccelOffset
     self.torque_params.friction = friction
 
-  def update(self, active, CS, VM, params, steer_limited_by_safety, desired_curvature, curvature_limited, lat_delay, llk, model_data, frogpilot_toggles):
+  def update(self, active, CS, VM, params, steer_limited_by_safety, desired_curvature, curvature_limited, lat_delay, calibrated_pose, model_data, frogpilot_toggles):
     pid_log = log.ControlsState.LateralTorqueState.new_message()
     if not active:
       output_torque = 0.0
@@ -249,35 +254,73 @@ class LatControlNNFF(LatControl):
       curvature_deadzone = abs(VM.calc_curvature(math.radians(self.steering_angle_deadzone_deg), CS.vEgo, 0.0))
       desired_lateral_accel = desired_curvature * CS.vEgo ** 2
 
-      # desired rate is the desired rate of change in the setpoint, not the absolute desired curvature
-      # desired_lateral_jerk = desired_curvature_rate * CS.vEgo ** 2
+      # Begin lane nudge
+      #left_lane_valid = model_v2.laneLineProbs[1] > 0.5
+      #right_lane_valid = model_v2.laneLineProbs[2] > 0.5
+      left_lane = interp(5, model_data.laneLines[1].x, model_data.laneLines[1].y)
+      right_lane = interp(5, model_data.laneLines[2].x, model_data.laneLines[2].y)
+      lane_avg = left_lane + right_lane
+      lane_val = interp(lane_avg, LANE_IN, NUDGE_OUT)
+      self.sm.update(0)
+      if CS.leftBlinker or CS.rightBlinker or CS.steeringPressed:
+        self.no_nudge = self.sm.frame
+        self.max_cycles = 0
+        self.cycles = 0
+      nudge_off = (self.sm.frame - self.no_nudge) * DT_CTRL < 6.0 # cooldown after blinker
+      if right_lane > 2.5 or abs(left_lane) > 2.5:  
+        nudge_off = False
+        self.last_nudge = 0
+        self.cycles = 0
+      if self.current_nud > 0 and lane_val < 0 or self.current_nud < 0 and lane_val > 0:
+        self.cycles = 0
+        self.last_nudge = 0
+      if right_lane > left_lane < LL_CLOSE or left_lane > right_lane < LL_CLOSE and not nudge_off:
+        self.current_nud = lane_val
+        if lane_val > 0 and lane_val > self.last_nudge:
+          self.last_nudge += NUDGE_UP
+        if lane_val < 0 and lane_val < self.last_nudge:
+          self.last_nudge += NUDGE_DOWN
+        self.cycles = self.cycles + 1
+        if self.cycles > self.max_cycles:
+          self.max_cycles = self.cycles
+        if abs(lane_val) > abs(self.last_nudge):
+          lane_val = self.last_nudge
+        desired_lateral_accel += lane_val
+        max_nud = round(self.last_nudge, 4)
+        cur_nud = round(self.current_nud, 4)
+        self.last_nudge = lane_val
+        #print(f"NUD: {max_nud} / {cur_nud} / {self.cycles} / {self.max_cycles}")
+      else:
+        self.last_nudge = 0
+        self.cycles = 0
+      # End lane nudge 
+      
       actual_lateral_accel = actual_curvature * CS.vEgo ** 2
       lateral_accel_deadzone = curvature_deadzone * CS.vEgo ** 2
 
-      low_speed_factor = interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)**2
+      low_speed_factor = np.interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)**2
       setpoint = desired_lateral_accel + low_speed_factor * desired_curvature
       measurement = actual_lateral_accel + low_speed_factor * actual_curvature
       gravity_adjusted_lateral_accel = desired_lateral_accel - roll_compensation
       if self.nnff_loaded and frogpilot_toggles.nnff or frogpilot_toggles.nnff_lite:
         actual_curvature_rate = -VM.calc_curvature(math.radians(CS.steeringRateDeg), CS.vEgo, 0.0)
         actual_lateral_jerk = actual_curvature_rate * CS.vEgo ** 2
-        lat_accel_friction_factor = self.lat_accel_friction_factor
 
         model_good = model_data is not None and len(model_data.orientation.x) >= CONTROL_N
 
         if model_good:
           # prepare "look-ahead" desired lateral jerk
-          lookahead = interp(CS.vEgo, self.friction_look_ahead_bp, self.friction_look_ahead_v)
+          lookahead = np.interp(CS.vEgo, self.friction_look_ahead_bp, self.friction_look_ahead_v)
           friction_upper_idx = next((idxs for idxs, value in enumerate(ModelConstants.T_IDXS) if value > lookahead), 16)
 
           predicted_lateral_jerk = get_predicted_lateral_jerk(model_data.acceleration.y, self.t_diffs)
-          desired_lateral_jerk = (interp(lat_delay, ModelConstants.T_IDXS, model_data.acceleration.y) - desired_lateral_accel) / lat_delay
+          desired_lateral_jerk = (np.interp(lat_delay, ModelConstants.T_IDXS, model_data.acceleration.y) - desired_lateral_accel) / lat_delay
 
           lookahead_lateral_jerk = get_lookahead_value(predicted_lateral_jerk[LAT_PLAN_MIN_IDX:friction_upper_idx], desired_lateral_jerk)
 
           if lookahead_lateral_jerk == 0.0:
             actual_lateral_jerk = 0.0
-            lat_accel_friction_factor = 1.0
+            self.lat_accel_friction_factor = 1.0
 
           lateral_jerk_setpoint = self.lat_jerk_friction_factor * lookahead_lateral_jerk
           lateral_jerk_measurement = self.lat_jerk_friction_factor * actual_lateral_jerk
@@ -290,8 +333,8 @@ class LatControlNNFF(LatControl):
           # update past data
           pitch = 0
           roll = params.roll
-          if len(llk.calibratedOrientationNED.value) > 1:
-            pitch = self.pitch.update(llk.calibratedOrientationNED.value[1])
+          if calibrated_pose is not None:
+            pitch = self.pitch.update(calibrated_pose.orientation.pitch)
             roll = roll_pitch_adjust(roll, pitch)
 
           self.roll_deque.append(roll)
@@ -301,10 +344,10 @@ class LatControlNNFF(LatControl):
           # adjust future times to account for longitudinal acceleration
           adjusted_future_times = [time + 0.5 * CS.aEgo * (time / max(CS.vEgo, 1.0)) for time in self.nn_future_times]
           past_rolls = [self.roll_deque[min(len(self.roll_deque)-1, offset)] for offset in self.history_frame_offsets]
-          future_rolls = [roll_pitch_adjust(interp(time, ModelConstants.T_IDXS, model_data.orientation.x) + roll, interp(time, ModelConstants.T_IDXS, model_data.orientation.y) + pitch) for time in adjusted_future_times]
+          future_rolls = [roll_pitch_adjust(np.interp(time, ModelConstants.T_IDXS, model_data.orientation.x) + roll, np.interp(time, ModelConstants.T_IDXS, model_data.orientation.y) + pitch) for time in adjusted_future_times]
 
           past_lateral_accels_desired = [self.lateral_accel_desired_deque[min(len(self.lateral_accel_desired_deque)-1, offset)] for offset in self.history_frame_offsets]
-          future_lateral_accels = [interp(time, ModelConstants.T_IDXS, model_data.acceleration.y) for time in adjusted_future_times]
+          future_lateral_accels = [np.interp(time, ModelConstants.T_IDXS, model_data.acceleration.y) for time in adjusted_future_times]
 
           base_input = [CS.vEgo, roll]
           nnff_common = past_rolls + future_rolls
@@ -313,31 +356,26 @@ class LatControlNNFF(LatControl):
           nnff_setpoint_input = base_input[:1] + [setpoint, lateral_jerk_setpoint] + base_input[1:] + [setpoint] * self.past_future_len + nnff_common
           nnff_measurement_input = base_input[:1] + [measurement, lateral_jerk_measurement] + base_input[1:] + [measurement] * self.past_future_len + nnff_common
 
-          # compute feedforward (same as nn setpoint output)
-          error = setpoint - measurement
-          friction_input = lat_accel_friction_factor * error + self.lat_jerk_friction_factor * lookahead_lateral_jerk
-          nn_input = [CS.vEgo, desired_lateral_accel, friction_input, roll] + past_lateral_accels_desired + future_lateral_accels + nnff_common
-
-          nn_inputs = [nnff_setpoint_input, nnff_measurement_input, nn_input]
-
-          error_blend = interp(abs(desired_lateral_accel), [1.0, 2.0], [0.0, 1.0])
-          if error_blend > 0.0:
-            nn_inputs.append([CS.vEgo, error, lateral_jerk_setpoint - lateral_jerk_measurement, 0.0])
-
-          nn_outputs = self.lat_torque_nn_model.evaluate(nn_inputs)
-          torque_from_setpoint, torque_from_measurement, ff = nn_outputs[:3]
+          torque_from_setpoint = self.lat_torque_nn_model.evaluate(nnff_setpoint_input)
+          torque_from_measurement = self.lat_torque_nn_model.evaluate(nnff_measurement_input)
 
           pid_log.error = torque_from_setpoint - torque_from_measurement
 
+          error_blend = np.interp(abs(desired_lateral_accel), [1.0, 2.0], [0.0, 1.0])
           if error_blend > 0.0:  # blend in stronger error response when in high lat accel
-            torque_from_error = nn_outputs[3]
+            torque_from_error = self.lat_torque_nn_model.evaluate([CS.vEgo, setpoint - measurement, lateral_jerk_setpoint - lateral_jerk_measurement, 0.0])
             if sign(pid_log.error) == sign(torque_from_error) and abs(pid_log.error) < abs(torque_from_error):
               pid_log.error = float(pid_log.error * (1.0 - error_blend) + torque_from_error * error_blend)
 
+          # compute feedforward (same as nn setpoint output)
+          error = setpoint - measurement
+          friction_input = self.lat_accel_friction_factor * error + self.lat_jerk_friction_factor * lookahead_lateral_jerk
+          nn_input = [CS.vEgo, desired_lateral_accel, friction_input, roll] + past_lateral_accels_desired + future_lateral_accels + nnff_common
+          ff = self.lat_torque_nn_model.evaluate(nn_input)
+
           # apply friction override for cars with low NN friction response
           if self.nn_friction_override:
-            friction_override = get_friction(friction_input, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params)
-            pid_log.error += float(self.torque_from_lateral_accel(friction_override, self.torque_params))
+            pid_log.error += self.torque_from_lateral_accel(0.0, self.torque_params)
         else:
           torque_from_measurement = self.torque_from_lateral_accel(measurement, self.torque_params)
           torque_from_setpoint = self.torque_from_lateral_accel(setpoint, self.torque_params)
@@ -345,17 +383,15 @@ class LatControlNNFF(LatControl):
           pid_log.error = float(torque_from_setpoint - torque_from_measurement)
 
           error = desired_lateral_accel - actual_lateral_accel
-          friction_input = lat_accel_friction_factor * error + self.lat_jerk_friction_factor * lookahead_lateral_jerk
-          friction_compensation = get_friction(friction_input, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params) if frogpilot_toggles.nnff_lite else 0.0
-          ff = self.torque_from_lateral_accel(gravity_adjusted_lateral_accel + friction_compensation, self.torque_params)
+          friction_input = self.lat_accel_friction_factor * error + self.lat_jerk_friction_factor * lookahead_lateral_jerk
+          ff = self.torque_from_lateral_accel(gravity_adjusted_lateral_accel, self.torque_params)
       else:
         torque_from_measurement = self.torque_from_lateral_accel(measurement, self.torque_params)
         torque_from_setpoint = self.torque_from_lateral_accel(setpoint, self.torque_params)
 
         pid_log.error = float(torque_from_setpoint - torque_from_measurement)
 
-        friction_compensation = get_friction(desired_lateral_accel - actual_lateral_accel, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params)
-        ff = self.torque_from_lateral_accel(gravity_adjusted_lateral_accel + friction_compensation, self.torque_params)
+        ff = self.torque_from_lateral_accel(gravity_adjusted_lateral_accel, self.torque_params)
 
       freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
       output_torque = self.pid.update(pid_log.error,
